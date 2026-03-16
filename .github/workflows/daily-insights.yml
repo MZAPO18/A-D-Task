@@ -34,9 +34,8 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY:    ${{ secrets.OPENAI_API_KEY }}
-          SENDGRID_API_KEY:  ${{ secrets.SENDGRID_API_KEY }}
           NEWSAPI_KEY:       ${{ secrets.NEWSAPI_KEY }}
-          FROM_EMAIL:        ${{ secrets.FROM_EMAIL }}
-          TO_EMAIL:          mzimmerman@apollo.com
-          GIT_USER_EMAIL:    ${{ secrets.GIT_USER_EMAIL }}
+          SMTP_USER:         mzimmerman@apollo.com
+          SMTP_PASS:         ${{ secrets.SMTP_PASS }}
+          GIT_USER_EMAIL:    mzimmerman@apollo.com
           GIT_USER_NAME:     insights-bot

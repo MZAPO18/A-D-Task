@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
 Daily A&D / Gov Services Investor Brief Automation
-Fetches news, generates dual-AI briefs (Claude + GPT), sends via SendGrid,
+Fetches news, generates dual-AI briefs (Claude + GPT), sends via SMTP (Microsoft 365),
 and commits the brief to the repo for delta comparison.
 """
 
 import os
 import sys
 import subprocess
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -15,8 +18,6 @@ import requests
 import anthropic
 import openai
 import markdown as md
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -25,10 +26,14 @@ load_dotenv()
 
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 OPENAI_API_KEY    = os.environ["OPENAI_API_KEY"]
-SENDGRID_API_KEY  = os.environ["SENDGRID_API_KEY"]
 NEWSAPI_KEY       = os.environ["NEWSAPI_KEY"]
-FROM_EMAIL        = os.environ["FROM_EMAIL"]
-TO_EMAIL          = os.environ.get("TO_EMAIL", "mzimmerman@apollo.com")
+SMTP_USER         = os.environ.get("SMTP_USER", "mzimmerman@apollo.com")
+SMTP_PASS         = os.environ["SMTP_PASS"]
+FROM_EMAIL        = SMTP_USER
+TO_EMAIL          = os.environ.get("TO_EMAIL", SMTP_USER)  # send to yourself
+
+SMTP_HOST = "smtp.office365.com"
+SMTP_PORT = 587
 
 CLAUDE_MODEL  = "claude-sonnet-4-6"
 GPT_MODEL     = "gpt-4.5-preview"   # update to gpt-5.4-thinking when available
@@ -346,17 +351,20 @@ def build_email_html(claude_brief: str, gpt_brief: str) -> str:
 
 
 def send_email(html_content: str) -> None:
-    """Send the email via SendGrid."""
+    """Send the email via Microsoft 365 SMTP."""
     subject = f"A&D Daily Brief — {TODAY}"
-    message = Mail(
-        from_email=FROM_EMAIL,
-        to_emails=TO_EMAIL,
-        subject=subject,
-        html_content=html_content,
-    )
-    sg = SendGridAPIClient(SENDGRID_API_KEY)
-    resp = sg.send(message)
-    print(f"  Email sent — status {resp.status_code}")
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"]    = FROM_EMAIL
+    msg["To"]      = TO_EMAIL
+    msg.attach(MIMEText(html_content, "html"))
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        server.ehlo()
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.sendmail(FROM_EMAIL, [TO_EMAIL], msg.as_string())
+    print(f"  Email sent to {TO_EMAIL}")
 
 
 def save_and_commit(claude_brief: str, gpt_brief: str) -> None:
