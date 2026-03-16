@@ -1,0 +1,42 @@
+name: Daily A&D Insights Email
+
+on:
+  schedule:
+    # 8:00 AM ET (UTC-5) = 13:00 UTC, Mon–Fri
+    - cron: '0 13 * * 1-5'
+  workflow_dispatch:  # allow manual trigger for testing
+
+permissions:
+  contents: write   # required to commit daily briefs back to the repo
+
+jobs:
+  run-insights:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run insights bot
+        run: python insights_bot.py
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY:    ${{ secrets.OPENAI_API_KEY }}
+          SENDGRID_API_KEY:  ${{ secrets.SENDGRID_API_KEY }}
+          NEWSAPI_KEY:       ${{ secrets.NEWSAPI_KEY }}
+          FROM_EMAIL:        ${{ secrets.FROM_EMAIL }}
+          TO_EMAIL:          mzimmerman@apollo.com
+          GIT_USER_EMAIL:    ${{ secrets.GIT_USER_EMAIL }}
+          GIT_USER_NAME:     insights-bot
